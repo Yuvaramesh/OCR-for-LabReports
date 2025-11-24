@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, send_file
 from werkzeug.utils import secure_filename
 import pytesseract
 from PIL import Image
@@ -127,6 +127,22 @@ HTML_TEMPLATE = """
             word-wrap: break-word;
             color: #555;
             line-height: 1.6;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .download-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 15px;
+            transition: background 0.3s;
+        }
+        .download-btn:hover {
+            background: #218838;
         }
         .loading {
             display: none;
@@ -215,10 +231,15 @@ HTML_TEMPLATE = """
                 const data = await response.json();
 
                 if (response.ok) {
+                    // Store the extracted text globally
+                    window.extractedText = data.text || 'No text found';
+                    window.originalFileName = fileInput.files[0].name.replace(/\.[^/.]+$/, '');
+                    
                     result.innerHTML = `
                         <div class="result">
                             <h3>Extracted Text:</h3>
-                            <pre>${data.text || 'No text found'}</pre>
+                            <pre>${window.extractedText}</pre>
+                            <button class="download-btn" onclick="downloadText()">📥 Download as TXT</button>
                         </div>
                     `;
                 } else {
@@ -231,6 +252,22 @@ HTML_TEMPLATE = """
                 submitBtn.disabled = false;
             }
         });
+
+        function downloadText() {
+            const text = window.extractedText || '';
+            const filename = `${window.originalFileName}_extracted.txt`;
+            
+            // Create blob and download
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }
     </script>
 </body>
 </html>
